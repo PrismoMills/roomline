@@ -1,62 +1,88 @@
 # Roomline
 
-A local collaborative whiteboard and chat application with persistent accounts, rooms, and personal snapshots.
+**A shared whiteboard and conversation space for small teams.**
 
-## Start
+Roomline brings drawing, chat, and room members into one browser workspace. Sketch an idea while discussing it, see where others are pointing, and save a useful moment to revisit later.
 
-Requires Python 3.10 or later.
+Built for study groups, project discussions, and collaborative planning, Roomline keeps your rooms and their content available between sessions. Sign in, open a room, and continue where you left off.
+
+## Work together on the same canvas
+
+Draw freely, add lines and rectangles, switch colors, or adjust your stroke width. Changes appear on your teammates' whiteboards as you work. Each person's cursor carries their account ID, making it easy to follow a discussion across the canvas.
+
+Undo removes your own latest drawing. Room owners can clear the shared board when the group is ready to start again.
+
+## Keep the conversation beside the work
+
+The whiteboard sits beside a dedicated chat panel, so sketches and messages stay in view together. Your messages appear on the right, and messages from other members appear on the left.
+
+A compact member strip shows who's in the room. Online avatars stay in color, offline avatars turn gray, and recent speakers move to the front. Open the overflow list to see everyone, or use the **+** button to invite someone with a room link.
+
+## Pick up where you left off
+
+Your personal workspace holds the rooms you've joined. Closing a tab keeps your membership, so you can come back to the same conversation and whiteboard later.
+
+Invitation links work through sign-in and registration. Once signed in, you continue into the room you were invited to join. Separate tabs can use separate accounts within the same browser.
+
+## Save the ideas you want to keep
+
+Save a snapshot of the whiteboard to your personal gallery. Browse your images in a grid, open a larger preview, rename a snapshot, download it, or delete it.
+
+Snapshots preserve the board at the moment you save it. They remain in your gallery after you leave a room or the room is dissolved. Cursor labels stay outside the saved image.
+
+## Give every room a clear owner
+
+The person who creates a room becomes its owner. Owners can manage members, remove someone from the room, restore invitation access, transfer ownership, or dissolve the room.
+
+Going offline preserves ownership. When an owner permanently leaves, they can choose a successor. If they leave that choice open, Roomline randomly selects a remaining member. The room receives an announcement, and the new owner receives a notification, including when they next return from being offline.
+
+## Make the workspace your own
+
+Set a display name, upload an avatar, and update your password from personal settings. Accounts without an uploaded image receive a default avatar with a simple filled silhouette and a coordinated background.
+
+The layout adapts to desktop and smaller screens, keeping drawing tools, messages, and member controls accessible.
+
+## Start using Roomline
+
+Requires **Python 3.10 or later**.
 
 ```sh
 python -m pip install -r requirements.txt
 python server.py
 ```
 
-Open http://127.0.0.1:8765 and create an account. On Windows, you can also double-click `start.bat` after installing the dependencies.
+Open [Roomline on your computer](http://127.0.0.1:8765), create an account, and select **Create room**. Share the invitation link to bring in another member.
 
-Separate tabs in the same browser can also sign in as different users. Each tab stores a session selector in sessionStorage and uses its own HttpOnly session cookie. Chat, drawing requests, image loading, and live events all use that tab's selector. A fresh tab opens the sign-in screen, while refreshing an existing tab keeps its selected account.
+On Windows, you can also double-click `start.bat` after installing the dependencies.
 
-For trusted LAN testing, set `ROOMLINE_HOST=0.0.0.0` before starting. Other computers must open the host computer's LAN address on port 8765. Copy an invitation from that address so it works on other devices. The host firewall must allow incoming traffic. Use HTTPS and a production WSGI server before internet deployment. The included server is intended for local demonstrations.
+<details>
+<summary>Connect from another computer on the same network</summary>
 
-`ROOMLINE_DB` overrides the database path and `ROOMLINE_PORT` overrides the port. The default SQLite database is created beside `server.py`.
+Start the server with `ROOMLINE_HOST` set to `0.0.0.0`. In PowerShell:
 
-## Workspace
+```powershell
+$env:ROOMLINE_HOST = "0.0.0.0"
+python server.py
+```
 
-- Joined rooms persist across sessions. Closing the page keeps your membership.
-- Personal snapshots show as a grid with preview, download, rename, and delete controls.
-- The profile page supports nickname, avatar, and password changes.
-- Invitation links continue after signing in or registering.
+Open the host computer's LAN IP address on port 8765 from the other computer, such as `http://192.168.1.100:8765`. Use your host's actual address, allow the connection through its firewall, and create invitation links from that address. The host must remain running.
 
-## Collaboration
+</details>
 
-- The whiteboard and chat share one room. A fixed four-avatar strip sits above chat, followed by an overflow member list and an invitation button.
-- Members sort by their most recent message. Online members have colored avatars and green status indicators. Offline members appear gray. A room connection marks presence, and a member's arrival adds a quiet system message.
-- Your messages appear on the right; other members' messages appear on the left. Default avatars are filled head-and-shoulder silhouettes in a slightly deeper shade than their circular backgrounds.
-- Whiteboard cursors are small colored circles with account usernames beside them. Positions are shared with current room participants and removed on exit or disconnect. Cursors are excluded from saved snapshots.
-- Tools include pen, eraser, line, rectangle, stroke width, and colors. Undo removes the requesting user's latest drawing. Only the owner can clear the shared canvas.
-- Snapshots capture the visible canvas at save time and remain in the user's gallery after leaving or room dissolution.
-- The creator owns the room. Ownership persists when offline. The owner can transfer control, remove members, restore invitation access, or dissolve the room.
-- A departing owner can name a successor. Without a selection, a remaining member is chosen randomly, including offline members. The last member's permanent departure closes the room.
-- Ownership changes add a room announcement and a notification for the successor. An offline successor receives the notification when they next open the workspace or room.
+<details>
+<summary>Technical details and testing</summary>
 
-## Implementation
+Roomline uses a browser frontend, Flask, and SQLite. Server-Sent Events deliver room updates, and HTTP requests send chat and drawing operations. Server-side checks enforce membership, ownership, and access to personal snapshots. Passwords are hashed, and session cookies are HttpOnly and SameSite.
 
-Flask serves the browser UI and JSON endpoints. SQLite transactions coordinate authorization, mutations, and a durable room event log. Server-Sent Events deliver room changes; client operations use HTTP POST. A reconnect resumes after the last received event. Incoming strokes have stable IDs, normalized coordinates, and server ordering. Temporary drawing previews are transmitted during dragging; completed strokes persist and take precedence over late previews.
+The application creates `roomline.db` beside `server.py`. `ROOMLINE_DB` and `ROOMLINE_PORT` can override the database path and listening port. The database is excluded from the source repository and ZIP package.
 
-Passwords are hashed and sessions use HttpOnly, SameSite cookies selected independently by each tab. Membership and owner permissions are checked on the server. Removed members cannot reuse an invitation until their access is restored. Personal image routes check ownership.
-
-Messages currently display the latest 300 entries per room. Snapshots and drawings are durable. This version targets small study or project groups. It does not include password recovery, email delivery, or distributed multi-server presence.
-
-## Verification
-
-Run the backend integration tests from this directory:
+Run the backend integration tests:
 
 ```sh
 python -B -m unittest -v test_server
 ```
 
-The seven tests cover room permissions and ownership, persistence, private snapshots, account isolation across shared browser cookies, successor notifications, default avatars, and cursor validation.
-
-The optional `test_browser.cjs` checks two tabs sharing one browser context, invitations, messaging, avatar ordering, drawing and cursor synchronization, reloading, snapshots, removal, and desktop/mobile layouts. Install Playwright and its Chromium browser, start the app with a separate test database, then run:
+For the optional browser tests, install Playwright and Chromium, start Roomline with a disposable test database, then run:
 
 ```sh
 npm install --no-save playwright
@@ -64,8 +90,8 @@ npx playwright install chromium
 node test_browser.cjs
 ```
 
-`ROOMLINE_TEST_URL` can override the browser test's default base URL. Use a disposable database for browser tests because they create sample accounts, rooms, messages, and snapshots.
+`ROOMLINE_TEST_URL` overrides the browser tests' base URL. Browser tests create sample accounts and room content.
 
-## Source package
+This version is designed for local and trusted LAN use with small groups. The chat panel displays the latest 300 messages per room. Internet deployment requires HTTPS and a production WSGI server. Presence tracking runs in one server process.
 
-The source ZIP contains the application, static assets, dependency list, launcher, documentation, and tests. Install the dependencies on the destination computer and start the server there. A fresh database is created on first startup. The package is a Python source distribution.
+</details>
